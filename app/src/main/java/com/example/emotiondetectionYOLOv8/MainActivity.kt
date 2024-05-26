@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.os.Bundle
 import android.util.Log
+import android.widget.Button
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.AspectRatio
@@ -24,7 +25,7 @@ import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity(), Detector.DetectorListener {
     private lateinit var binding: ActivityMainBinding
-    private val isFrontCamera = false
+    private var isFrontCamera = false
 
     private var preview: Preview? = null
     private var imageAnalyzer: ImageAnalysis? = null
@@ -40,6 +41,11 @@ class MainActivity : AppCompatActivity(), Detector.DetectorListener {
         setContentView(binding.root)
 
         cameraExecutor = Executors.newSingleThreadExecutor()
+
+        val btnSwitchCamera = findViewById(R.id.btn_SwitchCamera) as Button
+        btnSwitchCamera.setOnClickListener {
+            switchCamera()
+        }
 
         cameraExecutor.execute {
             detector = Detector(baseContext, MODEL_PATH, LABELS_PATH, this)
@@ -78,14 +84,19 @@ class MainActivity : AppCompatActivity(), Detector.DetectorListener {
         }, ContextCompat.getMainExecutor(this))
     }
 
+    private fun switchCamera() {
+        isFrontCamera = !isFrontCamera
+        bindCameraUseCases() // Rebind the camera use cases with the new camera selector
+    }
+
     private fun bindCameraUseCases() {
         val cameraProvider = cameraProvider ?: throw IllegalStateException("Camera initialization failed.")
 
         val rotation = binding.viewFinder.display.rotation
 
-        val cameraSelector = CameraSelector
-            .Builder()
-            .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+
+        val cameraSelector = CameraSelector.Builder()
+            .requireLensFacing(if (isFrontCamera) CameraSelector.LENS_FACING_FRONT else CameraSelector.LENS_FACING_BACK)
             .build()
 
         preview =  Preview.Builder()
